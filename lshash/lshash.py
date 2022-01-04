@@ -4,6 +4,8 @@
 # This module is part of lshash and is released under
 # the MIT License: http://www.opensource.org/licenses/mit-license.php
 
+# wiki:https://yongyuan.name/blog/ann-search.html
+
 import os
 import json
 import numpy as np
