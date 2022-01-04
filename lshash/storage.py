@@ -75,6 +75,7 @@ class InMemoryStorage(BaseStorage):
     def get_val(self, key):
         return self.storage[key]
 
+    # 如果相同的hashkey冲突了,就将值val追加在后面
     def append_val(self, key, val):
         self.storage.setdefault(key, []).append(val)
 

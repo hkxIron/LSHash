@@ -92,7 +92,7 @@ class LSHash(object):
                     self.uniform_planes = [t[1] for t in npzfiles]
             else:
                 self.uniform_planes = [self._generate_uniform_planes()
-                                       for _ in xrange(self.num_hashtables)]
+                                       for _ in range(self.num_hashtables)]
                 try:
                     np.savez_compressed(self.matrices_filename,
                                         *self.uniform_planes)
@@ -100,21 +100,22 @@ class LSHash(object):
                     print("IOError when saving matrices to specificed path")
                     raise
         else:
+            # 生成num_hashtable个随机划分表,每个表维度:[hash_size, dim]
             self.uniform_planes = [self._generate_uniform_planes()
-                                   for _ in xrange(self.num_hashtables)]
+                                   for _ in range(self.num_hashtables)]
 
     def _init_hashtables(self):
         """ Initialize the hash tables such that each record will be in the
         form of "[storage1, storage2, ...]" """
-
+        # 初始化存储对象
         self.hash_tables = [storage(self.storage_config, i)
-                            for i in xrange(self.num_hashtables)]
+                            for i in range(self.num_hashtables)]
 
     def _generate_uniform_planes(self):
         """ Generate uniformly distributed hyperplanes and return it as a 2D
         numpy array.
         """
-
+        # 每个dim中的一维代表用这个随机数对平面进行随机划分
         return np.random.randn(self.hash_size, self.input_dim)
 
     def _hash(self, planes, input_point):
@@ -130,6 +131,10 @@ class LSHash(object):
 
         try:
             input_point = np.array(input_point)  # for faster dot product
+            # planes:[hash_size, dim]
+            # input_point:[dim], 亦可理解为input_point: [dim,1]
+            # projections:[hash_size] = planes*input_point
+            # 矩阵planes与input_points相乘的几何意义就是判断input_points是否与planes每行的直线法向量的乘积
             projections = np.dot(planes, input_point)
         except TypeError as e:
             print("""The input point needs to be an array-like object with
@@ -140,6 +145,7 @@ class LSHash(object):
                   `input_dim` when initializing this LSHash instance""", e)
             raise
         else:
+            # 比如可能是'001'
             return "".join(['1' if i > 0 else '0' for i in projections])
 
     def _as_np_array(self, json_or_tuple):
@@ -200,9 +206,10 @@ class LSHash(object):
         else:
             value = tuple(input_point)
 
+        # 每个hash表均要存一下hash串
         for i, table in enumerate(self.hash_tables):
-            table.append_val(self._hash(self.uniform_planes[i], input_point),
-                             value)
+            hash_code = self._hash(self.uniform_planes[i], input_point)
+            table.append_val(key=hash_code, val=value)
 
     def query(self, query_point, num_results=None, distance_func=None):
         """ Takes `query_point` which is either a tuple or a list of numbers,
