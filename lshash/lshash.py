@@ -117,7 +117,7 @@ class LSHash(object):
         """ Generate uniformly distributed hyperplanes and return it as a 2D
         numpy array.
         """
-        # 每个dim中的一维代表用这个随机数对平面进行随机划分
+        # 随机矩阵[hash_size, input_dim], 矩阵每行代表一条直线的法向量,Ax>0即代表与所有平面的法向量的夹角<90的所有点x的集合
         return np.random.randn(self.hash_size, self.input_dim)
 
     def _hash(self, planes, input_point):
@@ -155,7 +155,7 @@ class LSHash(object):
         the original input points stored, and returns the original input point
         in numpy array format.
         """
-        if isinstance(json_or_tuple, basestring):
+        if isinstance(json_or_tuple, str):
             # JSON-serialized in the case of Redis
             try:
                 # Return the point stored as list, without the extra data
@@ -312,3 +312,20 @@ class LSHash(object):
     @staticmethod
     def cosine_dist(x, y):
         return 1 - np.dot(x, y) / ((np.dot(x, x) * np.dot(y, y)) ** 0.5)
+
+
+if __name__ == '__main__':
+    lsh = LSHash(hash_size=6, input_dim=8, num_hashtables=3)
+    # 给数据建立hash索引
+    lsh.index(input_point=[1, 2, 3, 4, 5, 6, 7, 8])
+    lsh.index(input_point=[2, 3, 4, 5, 6, 7, 8, 9])
+    lsh.index(input_point=[1, 2, 3, 4, 4, 6, 7, 8])
+    lsh.index(input_point=[1, 2, 3, 3, 5, 6, 7, 8])
+    lsh.index(input_point=[1, 2, 3, 4, 5, 6, 7, 9])
+    lsh.index(input_point=[2, 2, 3, 4, 5, 6, 7, 9])
+    lsh.index(input_point=[2, -2, 3, 4, 5, 6, 7, 9])
+    lsh.index(input_point=[-1, 2, 3, 4, 5, 6, 7, 9])
+    lsh.index(input_point=[10, 12, 99, 1, 5, 31, 2, 3])
+    # 查询
+    res = lsh.query(query_point=[1, 2, 3, 4, 5, 6, 7, 7], num_results=4)
+    print(res)
