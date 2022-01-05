@@ -109,7 +109,7 @@ class LSHash(object):
     def _init_hashtables(self):
         """ Initialize the hash tables such that each record will be in the
         form of "[storage1, storage2, ...]" """
-        # 初始化存储对象
+        # 初始化num_hashtable个hash表
         self.hash_tables = [storage(self.storage_config, i)
                             for i in range(self.num_hashtables)]
 
@@ -208,7 +208,7 @@ class LSHash(object):
         else:
             value = tuple(input_point)
 
-        # 每个hash表均要存一下hash串
+        # 每个hash表均要存一下hash串+原始point
         for i, table in enumerate(self.hash_tables):
             hash_code = self._hash(self.uniform_planes[i], input_point)
             table.append_val(key=hash_code, val=value)
@@ -246,6 +246,7 @@ class LSHash(object):
                 for key in table.keys():
                     distance = LSHash.hamming_dist(key, binary_hash)
                     if distance < 2:
+                        # 将该hash_key下所有的原始值全加入set
                         candidates.update(table.get_list(key))
 
             d_func = LSHash.euclidean_dist_square
@@ -265,19 +266,23 @@ class LSHash(object):
             else:
                 raise ValueError("The distance function name is invalid.")
 
+            # 只有hash值相同的才认为是候选集合,只要有一个hash表认为是候选就加入候选
             for i, table in enumerate(self.hash_tables):
                 binary_hash = self._hash(self.uniform_planes[i], query_point)
                 candidates.update(table.get_list(binary_hash))
 
         # rank candidates by distance function
-        candidates = [(ix, d_func(query_point, self._as_np_array(ix)))
-                      for ix in candidates]
+        # 计算query与每个候选集原始值的距离
+        # [(candidate_point, distance),... ]
+        candidates = [(candidate_point, d_func(query_point, self._as_np_array(candidate_point)))
+                      for candidate_point in candidates]
         candidates.sort(key=lambda x: x[1])
-
+        # 选出距离最近的topK
         return candidates[:num_results] if num_results else candidates
 
     ### distance functions
 
+    # 海明距离是直接异或么?直接数不同的位数的个数
     @staticmethod
     def hamming_dist(bitarray1, bitarray2):
         xor_result = bitarray(bitarray1) ^ bitarray(bitarray2)
@@ -286,8 +291,7 @@ class LSHash(object):
     @staticmethod
     def euclidean_dist(x, y):
         """ This is a hot function, hence some optimizations are made. """
-        diff = np.array(x) - y
-        return np.sqrt(np.dot(diff, diff))
+        return np.sqrt(LSHash.euclidean_dist_square(x,y))
 
     @staticmethod
     def euclidean_dist_square(x, y):
