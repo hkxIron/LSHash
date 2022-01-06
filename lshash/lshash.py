@@ -213,7 +213,7 @@ class LSHash(object):
             hash_code = self._hash(self.uniform_planes[i], input_point)
             table.append_val(key=hash_code, val=value)
 
-    def query(self, query_point, num_results=None, distance_func=None):
+    def query(self, query_point, num_results=None, distance_func_for_hash=None):
         """ Takes `query_point` which is either a tuple or a list of numbers,
         returns `num_results` of results as a list of tuples that are ranked
         based on the supplied metric function `distance_func`.
@@ -226,7 +226,7 @@ class LSHash(object):
             (optional) Integer, specifies the max amount of results to be
             returned. If not specified all candidates will be returned as a
             list in ranked order.
-        :param distance_func:
+        :param distance_func_for_hash:
             (optional) The distance function to be used. Currently it needs to
             be one of ("hamming", "euclidean", "true_euclidean",
             "centred_euclidean", "cosine", "l1norm"). By default "euclidean"
@@ -234,49 +234,50 @@ class LSHash(object):
         """
 
         candidates = set()
-        if not distance_func:
-            distance_func = "euclidean"
+        if not distance_func_for_hash:
+            distance_func_for_hash = "euclidean"
 
-        if distance_func == "hamming":
+        if distance_func_for_hash == "hamming":
             if not bitarray:
                 raise ImportError(" Bitarray is required for hamming distance")
 
             for i, table in enumerate(self.hash_tables):
-                binary_hash = self._hash(self.uniform_planes[i], query_point)
+                binary_hash_for_query = self._hash(self.uniform_planes[i], query_point)
                 for key in table.keys():
-                    distance = LSHash.hamming_dist(key, binary_hash)
+                    distance = LSHash.hamming_dist(key, binary_hash_for_query)
+                    # 所有hamming距离<2的全都加入候选集合,注意,不一定是相同hash_key下的所有候选point
                     if distance < 2:
                         # 将该hash_key下所有的原始值全加入set
                         candidates.update(table.get_list(key))
 
-            d_func = LSHash.euclidean_dist_square
+            d_func_for_rank = LSHash.euclidean_dist_square
 
-        else:
+        else: # euclidean
 
-            if distance_func == "euclidean":
-                d_func = LSHash.euclidean_dist_square
-            elif distance_func == "true_euclidean":
-                d_func = LSHash.euclidean_dist
-            elif distance_func == "centred_euclidean":
-                d_func = LSHash.euclidean_dist_centred
-            elif distance_func == "cosine":
-                d_func = LSHash.cosine_dist
-            elif distance_func == "l1norm":
-                d_func = LSHash.l1norm_dist
+            if distance_func_for_hash == "euclidean":
+                d_func_for_rank = LSHash.euclidean_dist_square
+            elif distance_func_for_hash == "true_euclidean":
+                d_func_for_rank = LSHash.euclidean_dist
+            elif distance_func_for_hash == "centred_euclidean":
+                d_func_for_rank = LSHash.euclidean_dist_centred
+            elif distance_func_for_hash == "cosine":
+                d_func_for_rank = LSHash.cosine_dist
+            elif distance_func_for_hash == "l1norm":
+                d_func_for_rank = LSHash.l1norm_dist
             else:
                 raise ValueError("The distance function name is invalid.")
 
             # 只有hash值相同的才认为是候选集合,只要有一个hash表认为是候选就加入候选
             for i, table in enumerate(self.hash_tables):
-                binary_hash = self._hash(self.uniform_planes[i], query_point)
-                candidates.update(table.get_list(binary_hash))
+                binary_hash_for_query = self._hash(self.uniform_planes[i], query_point)
+                candidates.update(table.get_list(binary_hash_for_query))
 
         # rank candidates by distance function
         # 计算query与每个候选集原始值的距离
         # [(candidate_point, distance),... ]
-        candidates = [(candidate_point, d_func(query_point, self._as_np_array(candidate_point)))
+        candidates = [(candidate_point, d_func_for_rank(query_point, self._as_np_array(candidate_point)))
                       for candidate_point in candidates]
-        candidates.sort(key=lambda x: x[1])
+        candidates.sort(key=lambda x: x[1]) # 按距离升序排序
         # 选出距离最近的topK
         return candidates[:num_results] if num_results else candidates
 
