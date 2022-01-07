@@ -237,7 +237,8 @@ class LSHash(object):
         if not distance_func_for_hash:
             distance_func_for_hash = "euclidean"
 
-        if distance_func_for_hash == "hamming":
+
+        if distance_func_for_hash == "hamming": # 此时实际上就是multi-probe的方式进行探测
             if not bitarray:
                 raise ImportError(" Bitarray is required for hamming distance")
 
