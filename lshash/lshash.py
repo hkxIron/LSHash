@@ -210,7 +210,9 @@ class LSHash(object):
 
         # 每个hash表均要存一下hash串+原始point
         for i, table in enumerate(self.hash_tables):
+            # 生成num_hashtable个随机划分表,每个表维度:[hash_size, dim]
             hash_code = self._hash(self.uniform_planes[i], input_point)
+            # 之所以有多个表,就是为了增大召回,即只要有一个划分方式一致就可以召回
             table.append_val(key=hash_code, val=value)
 
     def query(self, query_point, num_results=None, distance_func_for_hash=None):
